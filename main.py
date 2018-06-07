@@ -20,8 +20,10 @@ start_all=datetime.datetime.now()
 print('start time:',start_all)
 #train_path=r'D:\LJK\pingan\PINGAN-2018-train_demo.csv'
 path_train="/data/dm/train.csv"
+#path_train=r'C:\Users\miya\Documents\GitHub\pingan\PINGAN-2018-train_demo.csv'
 path_test="/data/dm/test.csv"
 path_result_out="model/pro_result.csv"
+#path_result_out=r'C:\Users\miya\Documents\GitHub\pingan\pro_result.csv'
 
 train=pd.read_csv(path_train)
 train.head()
@@ -97,14 +99,24 @@ def mean_max(item,speed,direction,height,func_select):
             nega_trip_acceleration_mean.append(sum(nega_acceleration[1:])/len(nega_acceleration))
         posi_trip_acceleration.append(posi_acceleration)
         nega_trip_acceleration.append(nega_acceleration)
+    am,pta_mean,pta_mean_max,nta_mean,nta_mean_max,psa_max,nsa_max=0,0,0,0,0,0,0   
+    if acceleration_mean:
+        am=sum(acceleration_mean)/len(acceleration_mean)#总加速度平均值
 
-    am=sum(acceleration_mean)/len(acceleration_mean)#总加速度平均值
-    pta_mean=sum(posi_trip_acceleration_mean)/len(posi_trip_acceleration_mean)#正加速度平均值
-    pta_mean_max=max(posi_trip_acceleration_mean)#每段trip正加速度平均值的最大值
-    nta_mean=sum(nega_trip_acceleration_mean)/len(nega_trip_acceleration_mean)#负加速度平均值
-    nta_mean_max=min(nega_trip_acceleration_mean)#每段trip负加速度平均值的最大值  
-    psa_max=max(posi_trip_acceleration_max)#正加速度最大值
-    nsa_max=min(nega_trip_acceleration_max)#负加速度最大值
+    if posi_trip_acceleration_mean:
+        pta_mean=sum(posi_trip_acceleration_mean)/len(posi_trip_acceleration_mean)#正加速度平均值
+
+    if posi_trip_acceleration_mean:
+        pta_mean_max=max(posi_trip_acceleration_mean)#每段trip正加速度平均值的最大值
+
+        
+    if nega_trip_acceleration_mean:
+        nta_mean=sum(nega_trip_acceleration_mean)/len(nega_trip_acceleration_mean)#负加速度平均值
+        nta_mean_max=min(nega_trip_acceleration_mean)#每段trip负加速度平均值的最大值
+    if posi_trip_acceleration_max:
+        psa_max=max(posi_trip_acceleration_max)#正加速度最大值
+    if nega_trip_acceleration_max:
+        nsa_max=min(nega_trip_acceleration_max)#负加速度最大值
     return am,pta_mean,pta_mean_max,nta_mean,nta_mean_max,psa_max,nsa_max
 
 for i in train['TERMINALNO'].unique():
@@ -170,6 +182,25 @@ feature_name=['item','trip_num','average_speed','max_speed','trip_average_speed_
               'h0','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','h11','h12','h13','h14','h15','h16','h17',
               'h18','h19','h20','h21','h22','h23','target']
 train1.columns=feature_name
+
+#建立xgb模型
+import xgboost as xgb
+from sklearn.model_selection import train_test_split
+
+do_not_use_for_training=['item','target']
+feature_names=[f for f in train1.columns if f not in do_not_use_for_training]
+y=np.array(train1['target'])
+#
+#对train进行训练数据和测试数据分割
+xtr,xv,ytr,yv=train_test_split(train1[feature_names].values,y,test_size=0.2,random_state=1987)
+dtrain=xgb.DMatrix(xtr,label=ytr)
+dvalid=xgb.DMatrix(xv,label=yv)
+#dtest=xgb.DMatrix(test[feature_names].values)
+watch=[(dtrain,'train'),(dvalid,'valide')]
+xgb_pars={'min_child_weight':50,'eta':0.3,'colsample_bytree':0.3,'max_depth':10,'subsample':0.8,
+          'lambda':1.,'nthread':-1,'booster':'gbtree','silent':1,'eval_metric':'rmse','objective':'reg:linear'}
+model=xgb.train(xgb_pars,dtrain,15,watch,early_stopping_rounds=2,maximize=False,verbose_eval=1)
+print('modeling RMSLE %.5f'% model.best_score)
 
 
 #测试数据
@@ -240,23 +271,7 @@ feature_name=['item','trip_num','average_speed','max_speed','trip_average_speed_
               'h18','h19','h20','h21','h22','h23','target']
 test1.columns=feature_name
 
-##建立xgb模型
-#import xgboost as xgb
-#from sklearn.model_selection import train_test_split
-#
-do_not_use_for_training=['item','target']
-feature_names=[f for f in train1.columns if f not in do_not_use_for_training]
-y=np.array(train1['target'])
-#
-##对train进行训练数据和测试数据分割
-#xtr,xv,ytr,yv=train_test_split(train1[feature_names].values,y,test_size=0.2,random_state=1987)
-#dtrain=xgb.DMatrix(xtr,label=ytr)
-#dvalid=xgb.DMatrix(xv,label=yv)
-##dtest=xgb.DMatrix(test[feature_names].values)
-#watch=[(dtrain,'train'),(dvalid,'valide')]
-#xgb_pars={'min_child_weight':1,'eta':0.5,'colsample_bytree':0.9,'max_depth':6,'subsample':0.9,
-#          'lambda':1.,'nthread':-1,'booster':'gbtree','silent':1,'eval_metric':'rmse','objective':'reg:linear'}
-#model=xgb.train(xgb_pars,dtrain,15,watch,early_stopping_rounds=2,maximize=False,verbose_eval=1)
+
 
 import lightgbm as lgb
 
@@ -268,7 +283,6 @@ model_lgb = lgb.LGBMRegressor(objective='regression',num_leaves=5,
                               min_data_in_leaf =6, min_sum_hessian_in_leaf = 11)
 model_lgb.fit(train1[feature_names].fillna(-1), train1['target'])
 
-#print('modeling RMSLE %.5f'% model.best_score)
 #print('modeling RMSLE %.5f'% model_lgb.best_score_)
 y_pred=model_lgb.predict(test1[feature_names].fillna(-1))
 
