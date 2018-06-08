@@ -125,10 +125,10 @@ for i in train['TERMINALNO'].unique():
     #时间特征
     item['TIME_Tsfd']=item['TIME'].apply(lambda x:datetime.datetime.fromtimestamp(x))
     item['TIME_Tsfd']=pd.to_datetime(item['TIME_Tsfd'])
-    item['Month']=item['TIME_Tsfd'].dt.month
+#    item['Month']=item['TIME_Tsfd'].dt.month
     item['hour']=item['TIME_Tsfd'].dt.hour
-    item['week_of_year']=item['TIME_Tsfd'].dt.weekofyear
-    item['day_of_week']=item['TIME_Tsfd'].dt.dayofweek
+#    item['week_of_year']=item['TIME_Tsfd'].dt.weekofyear
+#    item['day_of_week']=item['TIME_Tsfd'].dt.dayofweek
     trips_data_num=item['TERMINALNO'].shape[0]
     
     hour_state=np.zeros([24,1])
@@ -184,23 +184,23 @@ feature_name=['item','trip_num','average_speed','max_speed','trip_average_speed_
 train1.columns=feature_name
 
 #建立xgb模型
-import xgboost as xgb
-from sklearn.model_selection import train_test_split
+#import xgboost as xgb
+#from sklearn.model_selection import train_test_split
 
 do_not_use_for_training=['item','target']
 feature_names=[f for f in train1.columns if f not in do_not_use_for_training]
-y=np.array(train1['target'])
-#
-#对train进行训练数据和测试数据分割
-xtr,xv,ytr,yv=train_test_split(train1[feature_names].values,y,test_size=0.2,random_state=1987)
-dtrain=xgb.DMatrix(xtr,label=ytr)
-dvalid=xgb.DMatrix(xv,label=yv)
-#dtest=xgb.DMatrix(test[feature_names].values)
-watch=[(dtrain,'train'),(dvalid,'valide')]
-xgb_pars={'min_child_weight':50,'eta':0.3,'colsample_bytree':0.3,'max_depth':10,'subsample':0.8,
-          'lambda':1.,'nthread':-1,'booster':'gbtree','silent':1,'eval_metric':'rmse','objective':'reg:linear'}
-model=xgb.train(xgb_pars,dtrain,15,watch,early_stopping_rounds=2,maximize=False,verbose_eval=1)
-print('modeling RMSLE %.5f'% model.best_score)
+#y=np.array(train1['target'])
+##
+##对train进行训练数据和测试数据分割
+#xtr,xv,ytr,yv=train_test_split(train1[feature_names].values,y,test_size=0.2,random_state=1987)
+#dtrain=xgb.DMatrix(xtr,label=ytr)
+#dvalid=xgb.DMatrix(xv,label=yv)
+##dtest=xgb.DMatrix(test[feature_names].values)
+#watch=[(dtrain,'train'),(dvalid,'valide')]
+#xgb_pars={'min_child_weight':50,'eta':0.3,'colsample_bytree':0.3,'max_depth':10,'subsample':0.8,
+#          'lambda':1.,'nthread':-1,'booster':'gbtree','silent':1,'eval_metric':'rmse','objective':'reg:linear'}
+#model=xgb.train(xgb_pars,dtrain,15,watch,early_stopping_rounds=2,maximize=False,verbose_eval=1)
+#print('modeling RMSLE %.5f'% model.best_score)
 
 
 #测试数据
@@ -213,10 +213,10 @@ for i in test['TERMINALNO'].unique():
     #时间特征
     item['TIME_Tsfd']=item['TIME'].apply(lambda x:datetime.datetime.fromtimestamp(x))
     item['TIME_Tsfd']=pd.to_datetime(item['TIME_Tsfd'])
-    item['Month']=item['TIME_Tsfd'].dt.month
+#    item['Month']=item['TIME_Tsfd'].dt.month
     item['hour']=item['TIME_Tsfd'].dt.hour
-    item['week_of_year']=item['TIME_Tsfd'].dt.weekofyear
-    item['day_of_week']=item['TIME_Tsfd'].dt.dayofweek
+#    item['week_of_year']=item['TIME_Tsfd'].dt.weekofyear
+#    item['day_of_week']=item['TIME_Tsfd'].dt.dayofweek
     trips_data_num=item['TERMINALNO'].shape[0]
     
     hour_state=np.zeros([24,1])
